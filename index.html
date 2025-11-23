@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เว็บแนะนำการลดน้ำหนัก</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+header { background: #126607; color: white; padding: 20px; text-align: center; }
+section { padding: 20px; }
+form input, form select, form button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+button { background: #0f5c05; color: white; border: none; cursor: pointer; }
+.result-section { background: white; padding: 20px; margin: 20px; border-radius: 10px; }
+.card { display: inline-block; width: 180px; margin: 10px; text-align: center; vertical-align: top; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1);}
+.card img { width: 100%; height: 120px; object-fit: cover; border-radius: 5px; }
+h2, h3 { color: #333; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>เว็บแนะนำการลดน้ำหนัก</h1>
+    <p>กรอกข้อมูลเพื่อรับคำแนะนำส่วนบุคคล</p>
+</header>
+
+<section id="inputSection" class="result-section">
+    <h2>กรอกข้อมูลของคุณ</h2>
+
+    <form id="userForm">
+        <label>เพศ:</label>
+        <select id="gender">
+            <option value="male">ชาย</option>
+            <option value="female">หญิง</option>
+        </select>
+
+        <label>อายุ:</label>
+        <input type="number" id="age" required>
+
+        <label>น้ำหนัก (kg):</label>
+        <input type="number" id="weight" required>
+
+        <label>ส่วนสูง (cm):</label>
+        <input type="number" id="height" required>
+
+        <label>อาหารหรือสิ่งที่แพ้ (ใส่หลายตัวคั่นด้วย , ):</label>
+        <input type="text" id="allergy">
+
+        <button type="submit">คำนวณ</button>
+    </form>
+</section>
+
+<!-- ส่วนผลลัพธ์ -->
+<section id="resultSection" class="result-section" style="display:none;">
+    <h2>ผลลัพธ์ของคุณ</h2>
+
+    <p id="calorieOutput"></p>
+    <p id="riskOutput"></p>
+
+    <h3>แผนมื้ออาหารประจำวัน</h3>
+    <div id="mealPlan"></div>
+</section>
+
+<script>
+
+const fruits = [
+  {name:"แอปเปิ้ล", img:"https://home.maefahluang.org/images/editor/apple.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"ส้ม", img:"https://medthai.com/wp-content/uploads/2013/07/Orange-1.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"กีวี่", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEjBfTyK4sJvJOudgssXTrPIwlxbr_17WD7Q&s", nutrition:"วิตามิน A, C, น้ำ"},
+  {name:"แตงโม", img:"https://s.isanook.com/wo/0/ud/51/259101/watermelon1.jpg?ip/crop/w670h402/q80/jpg", nutrition:"วิตามิน A, C, น้ำ"},
+  {name:"สตรอว์เบอร์รี่", img:"https://upload.wikimedia.org/wikipedia/commons/4/43/Erdbeeren-WJP-1.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"องุ่น", img:"https://www.disthai.com/images/content/original-1696558141259.jpg", nutrition:"สารต้านอนุมูลอิสระ"},
+  {name:"เชอร์รี่", img:"https://medthai.com/wp-content/uploads/2013/07/Cherry-1.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"ลูกพีช", img:"https://irp-cdn.multiscreensite.com/54750584/dms3rep/multi/peach%2Bgoo%2Bteast.jpg", nutrition:"วิตามิน A, C"},
+  {name:"มะละกอ", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaFxv7ZVUpIuMSSHB-9tc6tk213JGaC-sYrg&s", nutrition:"วิตามิน C, เอนไซม์ย่อยอาหาร"},
+  {name:"ลูกแพร์", img:"https://medthai.com/wp-content/uploads/2013/09/%E0%B8%A5%E0%B8%B9%E0%B8%81%E0%B9%81%E0%B8%9E%E0%B8%A3%E0%B9%8C.jpg", nutrition:"ใยอาหาร, วิตามิน C"},
+  {name:"แคนตาลูป", img:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Cantaloupes.jpg/1200px-Cantaloupes.jpg", nutrition:"วิตามิน A, C"},
+  {name:"ลูกพรุน", img:"https://img.lazcdn.com/g/ff/kf/S8e682532c5034bc7bb5a034265147a6f2.jpg_720x720q80.jpg", nutrition:"ไฟเบอร์, แร่ธาตุ"},
+  {name:"ลูกแอปริคอต", img:"https://medthai.com/wp-content/uploads/2013/07/Apricot-1.jpg", nutrition:"วิตามิน A, C"},
+  {name:"มะขามป้อม", img:"https://inwfile.com/s-cv/nsxo0e.jpg", nutrition:"วิตามิน C สูง"},
+  {name:"มะนาว", img:"https://www.jmthaifood.com/wp-content/uploads/2020/01/%E0%B8%A1%E0%B8%B0%E0%B8%99%E0%B8%B2%E0%B8%A7.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"ลูกบลูเบอร์รี่", img:"https://www.monkeymeal.club/wcm/stocks/images/blogimage_1669862488.png", nutrition:"สารต้านอนุมูลอิสระ"},
+  {name:"แอปเปิ้ลเขียว", img:"https://spfresh.co.th/wp-content/uploads/2022/12/%E0%B9%81%E0%B8%AD%E0%B9%8A%E0%B8%9B%E0%B9%80%E0%B8%9B%E0%B8%B4%E0%B9%89%E0%B8%A5%E0%B9%80%E0%B8%82%E0%B8%B5%E0%B8%A2%E0%B8%A7-2.jpg", nutrition:"ใยอาหาร, วิตามิน C"},
+  {name:"สับปะรด", img:"https://image.makewebcdn.com/makeweb/m_1920x0/qeb9oj2Lg/Ingradian/shutterstock_1938509416.jpg", nutrition:"วิตามิน C, เอนไซม์ย่อยอาหาร"},
+  {name:"กล้วย", img:"https://inwfile.com/s-cg/scyhgv.jpg", nutrition:"โพแทสเซียม, วิตามิน B6"},
+  {name:"มะม่วง", img:"https://www.disthai.com/images/content/original-1677040787848.jpg", nutrition:"วิตามิน A, C"},
+  {name:"แตงโม", img:"https://s.isanook.com/wo/0/ud/51/259101/watermelon1.jpg?ip/crop/w670h402/q80/jpg", nutrition:"วิตามิน A, C, น้ำ"},
+  {name:"สตรอว์เบอร์รี่", img:"https://babimild.com/images/stories/natural/istock_000013443522xsmall.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"องุ่น", img:"https://www.disthai.com/images/content/original-1696558141259.jpg", nutrition:"สารต้านอนุมูลอิสระ"},
+  {name:"เชอร์รี่", img:"https://www.disthai.com/images/editor/01d57a609a213d11013e3b7de06536.jpg@2o_.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"มะละกอ", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaFxv7ZVUpIuMSSHB-9tc6tk213JGaC-sYrg&s", nutrition:"วิตามิน C, เอนไซม์ย่อยอาหาร"},
+  {name:"แคนตาลูป", img:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/Cantaloupes.jpg/1200px-Cantaloupes.jpg", nutrition:"วิตามิน A, C"},
+  {name:"ลูกพรุน", img:"https://img.lazcdn.com/g/ff/kf/S8e682532c5034bc7bb5a034265147a6f2.jpg_720x720q80.jpg", nutrition:"ไฟเบอร์, แร่ธาตุ"},
+  {name:"ลูกแอปริคอต", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQFzfDRodBSck1Bo1UvJTW2KDAX50TyxS156w&s", nutrition:"วิตามิน A, C"},
+  {name:"มังคุด", img:"https://f.ptcdn.info/737/022/000/1409023205-1408960005-o.jpg", nutrition:"สารต้านอนุมูลอิสระ"},
+  {name:"ลิ้นจี่", img:"https://cms.dmpcdn.com/food/2022/11/15/0157afb0-64b7-11ed-b3b3-4da09af9c0ca_webp_original.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"สาลี่", img:"https://www.hongthongrice.com/home/wp-content/uploads/2017/09/HTR-asian-pear-2.jpg", nutrition:"ใยอาหาร, วิตามิน"},
+  {name:"มะเฟือง", img:"https://res.cloudinary.com/dk0z4ums3/image/upload/v1511505028/attached_image_th/%25e0%25b8%25a1%25e0%25b8%25b0%25e0%25b9%2580%25e0%25b8%259f%25e0%25b8%25b7%25e0%25b8%25ad%25e0%25b8%2587.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"ราสป์เบอร์รี่", img:"https://mthai.com/app/uploads/2019/01/rasberry.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"แบล็กเบอร์รี่", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAOhGZKBLWQA3WCFBiA8CbKbcrk8ZS004QiQ&s", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"แครนเบอร์รี่", img:"https://s.isanook.com/wo/0/ud/12/62579/cranberry.jpg", nutrition:"วิตามิน C, สารต้านอนุมูลอิสระ"},
+  {name:"ลูกส้มโอ", img:"https://www.taladmaeklong.com/wp-content/uploads/2018/12/tubtim-siam.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"ส้มเขียวหวาน", img:"https://www.disthai.com/images/editor/%E0%B8%AA%E0%B9%89%E0%B8%A1%E0%B9%80%E0%B8%82%E0%B8%B5%E0%B8%A2%E0%B8%A7%E0%B8%AB%E0%B8%A7%E0%B8%B2%E0%B8%994.jpg", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"ลูกมะยม", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTEwrDolKGC_ge7vF3A2Gp8Y6DttJgY6QAKxQ&s", nutrition:"วิตามิน C, แร่ธาตุ"},
+  {name:"แตงไทย", img:"https://www.disthai.com/images/content/original-1739447575123.jpg", nutrition:"วิตามิน A, C"},
+  {name:"ลูกชมพู่", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmVMjgoNXE5nFxqw5Ltc5icz0-mskTewsZIw&s", nutrition:"วิตามิน C, ใยอาหาร"},
+  {name:"แตงกวา", img:"https://image.makewebcdn.com/makeweb/m_1920x0/qeb9oj2Lg/Ingradian/shutterstock_1030372471.jpg", nutrition:"น้ำสูง, ใยอาหาร"}
+
+
+];
+
+
+const foods = [
+  {name:"สลัดผัก", img:"https://fit-d.com/uploads/food/53d6529bd352b0711cc282d0126d9e80.jpg", nutrition:"ไฟเบอร์, วิตามิน"},
+  {name:"ข้าวกล้อง", img:"https://mthai.com/app/uploads/2019/01/brown-rice.jpg", nutrition:"คาร์โบไฮเดรตเชิงซ้อน"},
+  {name:"อกไก่ย่าง", img:"https://recipe.sgethai.com/wp-content/uploads/2025/09/cover-18092025-grilled-chicken-breast_result.webp", nutrition:"โปรตีนสูง, ไขมันต่ำ"},
+  {name:"ปลาแซลมอน", img:"https://www.chonklang.com/uploads/article/1550904582_Salmon.jpg", nutrition:"โอเมก้า 3, โปรตีน"},
+  {name:"ไข่ต้ม", img:"https://f.ptcdn.info/934/024/000/1414421654-2633333333-o.jpg", nutrition:"โปรตีน, วิตามิน B12"},
+  {name:"เต้าหู้", img:"https://res.cloudinary.com/dk0z4ums3/image/upload/v1684727920/attached_image_th/tofuwithsoybeanonwoodenboard.jpg", nutrition:"โปรตีนจากพืช, แคลเซียม"},
+  {name:"ซุปผัก", img:"https://cms.kapook.com/uploads/tag/42/ID_41193_5aeabe75c0ed1.jpg", nutrition:"วิตามิน, ไฟเบอร์"},
+  {name:"โยเกิร์ต", img:"https://img.th.my-best.com/product_images/6586217d6613ae4a627b948c11a180d6.jpeg?ixlib=rails-4.3.1&q=70&lossless=0&w=800&h=800&fit=clip&s=66cc32abfe848f9f76462231bf3bc38d", nutrition:"โปรไบโอติก, แคลเซียม"},
+  {name:"อะโวคาโด", img:"https://www.disthai.com/images/content/original-1659494371481.jpg", nutrition:"ไขมันดี, ใยอาหาร"},
+  {name:"ถั่วต่างๆ", img:"https://mpics.mgronline.com/pics/Images/557000000614701.JPEG", nutrition:"โปรตีน, ใยอาหาร"},
+  {name:"ข้าวโอ๊ต", img:"https://ricevariety.com/wp-content/uploads/2023/10/%E0%B8%82%E0%B9%89%E0%B8%B2%E0%B8%A7%E0%B9%82%E0%B8%AD%E0%B9%8A%E0%B8%95.webp", nutrition:"ไฟเบอร์, โปรตีน"},
+  {name:"เนื้อวัวไม่ติดมัน", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQCQc-CIu2WIH6IcHp_3XJLkItMB6viXvc-GQ&s", nutrition:"โปรตีน, ธาตุเหล็ก"},
+  {name:"กุ้งต้ม", img:"https://img.wongnai.com/p/1920x0/2018/07/14/5244bfb2d399447693d3abb2f4fba992.jpg", nutrition:"โปรตีน, ไอโอดีน"},
+  {name:"ปลาทูน่า", img:"https://imgcp.aacdn.jp/img-a/1200/auto/global-aaj-front/article/2018/05/5afd107d6c29a_5afd0edb4513a_511251507.jpg", nutrition:"โปรตีน, โอเมก้า3"},
+  {name:"สลัดผลไม้", img:"https://img.wongnai.com/p/1920x0/2018/07/19/c76ac67b13724391804b754ee6657a41.jpg", nutrition:"วิตามิน, ใยอาหาร"},
+  {name:"ขนมปังโฮลวีท", img:"https://s.isanook.com/he/0/ud/7/35401/wholewheat.jpg", nutrition:"คาร์โบไฮเดรตเชิงซ้อน, ไฟเบอร์"},
+  {name:"น้ำเต้าหู้", img:"https://img.kapook.com/u/2015/surauch/cooking1/soybean%20milk-2.jpg", nutrition:"โปรตีน, แคลเซียม"},
+  {name:"ผักต้มรวม", img:"https://www.sgethai.com/wp-content/uploads/2022/02/%E0%B8%9C%E0%B8%B1%E0%B8%81%E0%B8%95%E0%B9%89%E0%B8%A14.jpg", nutrition:"วิตามิน, ใยอาหาร"},
+  {name:"เนื้อไก่ไม่ติดมัน", img:"https://s.isanook.com/he/0/ud/5/25333/chicken-breast.jpg?ip/resize/w850/q80/jpg", nutrition:"โปรตีน, ไขมันต่ำ"},
+  {name:"ปลาอินทรีย์", img:"https://f.ptcdn.info/962/048/000/okn60h43e52CvFtYd7l-o.jpg", nutrition:"โอเมก้า3, โปรตีน"},
+  {name:"สลัดผักรวม", img:"https://img.wongnai.com/p/1920x0/2020/02/19/b8b1fd41dcec489d9ff51efe6089d692.jpg", nutrition:"ใยอาหาร, วิตามิน A, C"},
+  {name:"เต้าหู้ทอด", img:"https://s.isanook.com/he/0/ud/7/36741/istock-1161661496-re.jpg?ip/crop/w670h402/q80/jpg", nutrition:"โปรตีน, แคลเซียม"},
+  {name:"น้ำพริกผักสด", img:"https://img.pptvhd36.com/health/thumbor/2024/04/03/cusArticle-aa271f1.jpg", nutrition:"ใยอาหาร, วิตามิน C"},
+  {name:"สเต็กหมูไม่ติดมัน", img:"https://www.pitchameat.com/wp-content/uploads/2022/01/1.1-4.jpg", nutrition:"โปรตีน, เหล็ก"},
+  {name:"แกงจืดผักรวม", img:"https://i.ytimg.com/vi/ru1wJyr60QA/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLA2hITPFXGzJngXQY-aYYcGihcoGw", nutrition:"ใยอาหาร, วิตามิน"},
+  {name:"สปาเก็ตตี้โฮลวีท", img:"https://s.isanook.com/wo/0/ud/1/6802/spa.jpg?ip/crop/w1200h700/q80/jpg", nutrition:"ใยอาหาร, โปรตีน"},
+  {name:"ซุปฟักทอง", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdy5gyajYpm2xKBwd0DqVRxb5q_vRqqYtf0w&s", nutrition:"วิตามิน A, C, ใยอาหาร"},
+  {name:"เต้าหู้ผัดซอส", img:"https://www.pim.in.th/images/all-side-dish-vegetarian/fried-tofu-with-guilin-chilli-sauce/fried-tofu-with-guilin-chilli-sauce-18.jpg", nutrition:"โปรตีน, ใยอาหาร"},
+  {name:"ยำสาหร่าย", img:"https://img.wongnai.com/p/1920x0/2021/09/10/b303103053834f329f7e4eddfaf7d33d.jpg", nutrition:"แร่ธาตุ, ใยอาหาร"},
+  {name:"ไข่เจียวผัก", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZmZNnMyr_QazKDG95rUYSt7KzbkFxyklTjA&s", nutrition:"โปรตีน, วิตามิน A, C"},
+  {name:"น้ำเต้าหู้ไม่หวาน", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTlXSntl5Xkwi_nTjl8iUhzAHTuakSbpA0KkQ&s", nutrition:"โปรตีน, แคลเซียม"},
+  {name:"ผัดเห็ดรวม", img:"https://img.wongnai.com/p/1920x0/2019/03/04/e3f0cb4547de4efe9203dfd16f303e43.jpg", nutrition:"ใยอาหาร, แร่ธาตุ"},
+  {name:"แกงเขียวหวานไก่", img:"https://www.ajinomoto.co.th/storage/photos/shares/Recipe/Menu/3-19Greencurry/61a8f3939f40f.jpeg", nutrition:"โปรตีน, วิตามิน A, C"}
+ 
+];
+
+
+const exercises = [
+  {name:"สควอท", img:"https://cms.dmpcdn.com/sportarticle/2025/06/07/a3c4f360-439f-11f0-a2e8-e9e62831fe19_webp_original.webp", desc:"ย่อเข่า 90 องศา", benefit:"เสริมกล้ามเนื้อขา"},
+  {name:"แพลงก์", img:"https://s.isanook.com/me/0/ud/12/64843/plank.jpg?ip/crop/w670h402/q80/jpg", desc:"ค้างตัวตรง", benefit:"กระชับหน้าท้อง"},
+  {name:"วิดพื้น", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBNjJk9-kMJkRVPOfsIrcNYfX-m3ownT7G6A&s", desc:"ยกตัวขึ้นลง", benefit:"เสริมกล้ามเนื้อแขนและอก"},
+  {name:"ลันจ์", img:"https://siph-space.sgp1.digitaloceanspaces.com/media/upload/wrongexercise_02.jpg", desc:"ก้าวขาไปข้างหน้า", benefit:"กระชับต้นขาและก้น"},
+  {name:"เบิร์พี", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTka0zatPyx6N6Ah_GgSlOlWRysTncABJ-Sgw&s", desc:"ผสม squat และ jump", benefit:"เบิร์นไขมันทั้งตัว"},
+  {name:"จ๊อกกิ้ง", img:"https://s.isanook.com/wo/0/ud/16/80817/80817-20171002050907-0e1716f.jpg", desc:"วิ่งเบาๆ", benefit:"เสริมความแข็งแรงหัวใจ"},
+  {name:"จักรยานกลางอากาศ", img:"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbkuJmBqdOJsxRIr5DRoeRGaOrqd5zsNkndw&s", desc:"ปั่นขาในอากาศ", benefit:"กระชับหน้าท้อง"},
+  {name:"ยืดขา", img:"https://img.winnews.tv/files/site/3bc9dc887b2586914e2f37019367bfd2.jpg", desc:"ยืดกล้ามเนื้อขา", benefit:"ลดบาดเจ็บ"},
+  {name:"ท่าแมว-วัว", img:"https://www.homefittools.com/media/wysiwyg/News/Yoga-Pilates/6-easy-yoga-poses-back-pain-relief-3.png", desc:"ยืดหลัง", benefit:"เพิ่มความยืดหยุ่นกระดูกสันหลัง"},
+  {name:"กระโดดเชือก", img:"https://home.maefahluang.org/images/editor/2021/Exercise_%E0%B8%81%E0%B8%A3%E0%B8%B0%E0%B9%82%E0%B8%94%E0%B8%94%E0%B9%80%E0%B8%8A%E0%B8%B7%E0%B8%AD%E0%B8%81-2.jpg", desc:"กระโดดเชือก", benefit:"เบิร์นแคลอรี่เร็ว"},
+  {name:"รันนิ่ง (Running)", img:"https://www.engdict.com/data/dict/media/images_public/00061229638805851048929385_normal.png", description:"คาร์ดิโอ เผาผลาญแคลอรี่ ทำ 30 นาที"}
+];
+
+// --- ฟังก์ชันสุ่ม ---
+function getRandomItems(arr, count, excludeList = []) {
+  const filtered = arr.filter(item => !excludeList.includes(item.name));
+  const shuffled = filtered.sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+}
+
+// --- คำนวณแคลอรี่ BMR ---
+function calculateCalories(gender, age, weight, height, activity = 1.2) {
+  let bmr = (gender === "male")
+    ? 66 + (13.7 * weight) + (5 * height) - (6.8 * age)
+    : 655 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
+
+  return bmr * activity;
+}
+
+// --- ประเมินความเสี่ยงโรค ---
+function assessRisk(weight, height) {
+  const bmi = weight / ((height / 100) ** 2);
+  let risks = [];
+
+  if (bmi >= 30) risks.push("โรคอ้วน");
+  if (bmi >= 25) {
+    risks.push("โรคหัวใจ");
+    risks.push("เบาหวาน");
+  }
+
+  return risks.join(", ") || "ความเสี่ยงต่ำ";
+}
+
+// --- ฟังก์ชันสร้าง Card ---
+function createCardHTML(item) {
+  return `
+    <div class="card">
+      <img src="${item.img}" alt="${item.name}">
+      <h5>${item.name}</h5>
+      ${
+        item.nutrition
+          ? `<p>${item.nutrition}</p>`
+          : `<p>${item.desc}<br>ประโยชน์: ${item.benefit}</p>`
+      }
+    </div>`;
+}
+
+// -------------------------------
+// ฟังก์ชันหลักเมื่อกดปุ่มคำนวณ
+// -------------------------------
+document.getElementById('userForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+
+  const gender = document.getElementById('gender').value;
+  const age = parseInt(document.getElementById('age').value);
+  const weight = parseFloat(document.getElementById('weight').value);
+  const height = parseFloat(document.getElementById('height').value);
+
+  // แพ้อาหาร (แก้บัคแล้ว)
+  const allergyText = document.getElementById('allergy').value.trim();
+  const allergies = allergyText
+    ? allergyText.split(',').map(a => a.trim()).filter(a => a !== "")
+    : [];
+
+  // แสดงแคลอรี่
+  const calories = calculateCalories(gender, age, weight, height);
+  document.getElementById('calorieOutput').innerHTML =
+    `คุณควรรับพลังงานประมาณ <strong>${Math.round(calories)}</strong> แคลอรี่/วัน`;
+
+  // ความเสี่ยงโรค
+  const riskText = assessRisk(weight, height);
+  document.getElementById('riskOutput').innerHTML =
+    `ความเสี่ยงต่อโรค: ${riskText}`;
+
+  // สร้างมื้ออาหาร
+  const mealContainer = document.getElementById('mealPlan');
+  mealContainer.innerHTML = "";
+
+  let usedFruits = [];
+  let usedFoods = [];
+
+  for (let meal = 1; meal <= 3; meal++) {
+    const mealDiv = document.createElement('div');
+    mealDiv.innerHTML = `<h4>มื้อที่ ${meal}</h4>`;
+
+    // สุ่มรายการโดยไม่ซ้ำ
+    const mealFruits = getRandomItems(fruits, 5, usedFruits.map(f => f.name))
+      .filter(f => !allergies.includes(f.name));
+
+    const mealFoods = getRandomItems(foods, 5, usedFoods.map(f => f.name))
+      .filter(f => !allergies.includes(f.name));
+
+    const mealExercises = getRandomItems(exercises, 5);
+
+    usedFruits.push(...mealFruits);
+    usedFoods.push(...mealFoods);
+
+    mealDiv.innerHTML += `<h5>ผลไม้แนะนำ 5 ชนิด</h5>${mealFruits.map(createCardHTML).join('')}`;
+    mealDiv.innerHTML += `<h5>อาหารแนะนำ 5 รายการ</h5>${mealFoods.map(createCardHTML).join('')}`;
+    mealDiv.innerHTML += `<h5>ท่าออกกำลังกาย 5 ท่า</h5>${mealExercises.map(createCardHTML).join('')}`;
+
+    mealContainer.appendChild(mealDiv);
+  }
+
+  // ซ่อนฟอร์ม — โชว์ผลลัพธ์
+  document.getElementById('inputSection').style.display = "none";
+  document.getElementById('resultSection').style.display = "block";
+});
+</script>
+</body>
+</html>
